@@ -384,8 +384,7 @@ parentViewController:(UIViewController*)parentViewController
         self.isFlipped = NO;
     }
 }
-
-
+//-------------------------------------------------------------------------
 - (void)flipCamera
 {
     self.isFlipped = YES;
@@ -433,11 +432,11 @@ parentViewController:(UIViewController*)parentViewController
     
     [output setSampleBufferDelegate:self queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0)];
     
-    if (![captureSession canSetSessionPreset:AVCaptureSessionPresetMedium]) {
-        return @"unable to preset medium quality video capture";
+    if (![captureSession canSetSessionPreset:AVCaptureSessionPresetHigh]) {
+        return @"unable to preset high quality video capture";
     }
     
-    captureSession.sessionPreset = AVCaptureSessionPresetMedium;
+    captureSession.sessionPreset = AVCaptureSessionPresetHigh;
     
     if ([captureSession canAddInput:input]) {
         [captureSession addInput:input];
@@ -531,8 +530,6 @@ parentViewController:(UIViewController*)parentViewController
             [self barcodeScanSucceeded:resultString format:format];
         }
         
-        
-        
     }
     catch (zxing::ReaderException &rex) {
         //            NSString *message = [[[NSString alloc] initWithCString:rex.what() encoding:NSUTF8StringEncoding] autorelease];
@@ -554,6 +551,8 @@ parentViewController:(UIViewController*)parentViewController
     if (imageBytes) {
         free(imageBytes);
     }
+
+    [NSThread sleepForTimeInterval:0.001f];
 }
 
 //--------------------------------------------------------------------------
@@ -871,7 +870,25 @@ parentViewController:(UIViewController*)parentViewController
 - (IBAction)cancelButtonPressed:(id)sender {
     [self.processor performSelector:@selector(barcodeScanCancelled) withObject:nil afterDelay:0];
 }
-
+//--------------------------------------------------------------------------
+- (void)torchlightturn:(id)sender
+{
+    AVCaptureDevice *flashLight = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]; // zoltan mod
+    if ([flashLight isTorchAvailable] && [flashLight isTorchModeSupported:AVCaptureTorchModeOn])
+    {
+        BOOL success = [flashLight lockForConfiguration:nil];
+        if (success) 
+        {
+            if ([flashLight isTorchActive]) {
+                [flashLight setTorchMode:AVCaptureTorchModeOff];
+            } else {
+                [flashLight setTorchMode:AVCaptureTorchModeOn];
+            }
+            [flashLight unlockForConfiguration];
+        }
+    }
+}
+//--------------------------------------------------------------------------
 - (void)flipCameraButtonPressed:(id)sender
 {
     [self.processor performSelector:@selector(flipCamera) withObject:nil afterDelay:0];
@@ -908,6 +925,13 @@ parentViewController:(UIViewController*)parentViewController
 
     UIToolbar* toolbar = [[UIToolbar alloc] init];
     toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+
+    id torchlight = [[[UIBarButtonItem alloc] autorelease]
+                       initWithBarButtonSystemItem:UIBarButtonSystemItemCamera
+                       target:(id)self
+                       action:@selector(torchlightturn:)
+                       ];
+     
     
     id cancelButton = [[UIBarButtonItem alloc]
                        initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
@@ -923,7 +947,7 @@ parentViewController:(UIViewController*)parentViewController
                     ];
     
     id flipCamera = [[UIBarButtonItem alloc]
-                       initWithBarButtonSystemItem:UIBarButtonSystemItemCamera
+                       initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
                        target:(id)self
                        action:@selector(flipCameraButtonPressed:)
                        ];
@@ -935,9 +959,9 @@ parentViewController:(UIViewController*)parentViewController
                         action:@selector(shutterButtonPressed)
                         ];
     
-    toolbar.items = [NSArray arrayWithObjects:flexSpace,cancelButton,flexSpace, flipCamera ,shutterButton,nil];
+    toolbar.items = [NSArray arrayWithObjects:torchlight,flexSpace,cancelButton,flexSpace, flipCamera ,shutterButton,nil];
 #else
-    toolbar.items = [NSArray arrayWithObjects:flexSpace,cancelButton,flexSpace, flipCamera,nil];
+    toolbar.items = [NSArray arrayWithObjects:torchlight,flexSpace,cancelButton,flexSpace, flipCamera,nil];
 #endif
     bounds = overlayView.bounds;
     
